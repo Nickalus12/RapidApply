@@ -149,8 +149,9 @@ ai_provider = "grok"  # Options: "openai", "deepseek", "grok"
 # For Grok (Recommended)
 grok_api_key = "your-grok-api-key"
 grok_personal_style = "Your communication style preferences"
+use_grok_for_openai = True  # Use Grok for all AI operations
 
-# For OpenAI
+# For OpenAI (optional if using Grok)
 openai_api_key = "your-openai-key"
 
 # LinkedIn credentials (optional)

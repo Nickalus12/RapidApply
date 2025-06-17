@@ -40,6 +40,9 @@ Show enthusiasm for technology and problem-solving.
 Use concrete examples from experience when relevant.
 Be confident but not arrogant.
 """
+
+# Use Grok for all AI operations (including OpenAI)
+use_grok_for_openai = True  # Set to True to use Grok for everything
 ```
 
 ### 3. Personalize Your Style
@@ -64,7 +67,19 @@ Highlight quantifiable achievements.
 """
 ```
 
-### 4. Test Your Configuration
+### 4. Using Grok for All AI Operations
+
+The `use_grok_for_openai` toggle allows you to use Grok for all AI operations, even when the code was originally designed for OpenAI:
+
+- **Set to `True`**: All AI operations will use Grok, regardless of the `ai_provider` setting
+- **Set to `False`**: AI operations will use the provider specified in `ai_provider`
+
+This is perfect when:
+- You only have a Grok API key (no OpenAI key)
+- You prefer Grok's responses for all operations
+- You want to test Grok without changing all your configurations
+
+### 5. Test Your Configuration
 
 Run the test script to verify everything is working:
 

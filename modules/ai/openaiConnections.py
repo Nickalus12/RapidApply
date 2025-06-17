@@ -22,6 +22,13 @@ from config.search import security_clearance, did_masters
 from modules.helpers import print_lg, critical_error_log, convert_to_json
 from modules.ai.prompts import *
 
+# Import Grok functions if use_grok_for_openai is enabled
+try:
+    if use_grok_for_openai:
+        from modules.ai.grokConnections import grok_create_client, grok_extract_skills, grok_answer_question
+except:
+    pass
+
 from pyautogui import confirm
 from openai import OpenAI
 from openai.types.model import Model
@@ -73,6 +80,11 @@ def ai_create_openai_client() -> OpenAI:
     * Returns an `OpenAI` object
     """
     try:
+        # Redirect to Grok if toggle is enabled
+        if use_grok_for_openai:
+            print_lg("Redirecting to Grok client (use_grok_for_openai is enabled)...")
+            return grok_create_client()
+            
         print_lg("Creating OpenAI client...")
         if not use_AI:
             raise ValueError("AI is not enabled! Please enable it by setting `use_AI = True` in `secrets.py` in `config` folder.")
@@ -199,6 +211,10 @@ def ai_extract_skills(client: OpenAI, job_description: str, stream: bool = strea
     * Takes in `stream` of type `bool` to indicate if it's a streaming call
     * Returns a `dict` object representing JSON response
     """
+    # Redirect to Grok if toggle is enabled
+    if use_grok_for_openai:
+        return grok_extract_skills(client, job_description, stream)
+        
     print_lg("-- EXTRACTING SKILLS FROM JOB DESCRIPTION")
     try:        
         prompt = extract_skills_prompt.format(job_description)
@@ -234,6 +250,14 @@ def ai_answer_question(
     Returns:
     - `str`: The AI-generated answer.
     """
+    
+    # Redirect to Grok if toggle is enabled
+    if use_grok_for_openai:
+        return grok_answer_question(
+            client, question, options, question_type,
+            job_description, about_company, user_information_all,
+            personal_style=grok_personal_style, stream=stream
+        )
 
     print_lg("-- ANSWERING QUESTION using AI")
     try:

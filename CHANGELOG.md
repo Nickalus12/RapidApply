@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Grok AI integration for personalized job application responses
 - Support for multiple Grok models (grok-2-latest, grok-2-mini, grok-3-latest)
 - Personal style configuration for authentic AI responses
+- `use_grok_for_openai` toggle to use Grok for all AI operations
 - Comprehensive Grok setup documentation
 - Test script for Grok integration verification
 

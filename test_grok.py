@@ -5,8 +5,9 @@ Test script for Grok API integration
 import sys
 sys.path.append('.')
 
-from config.secrets import grok_api_key, grok_model, grok_personal_style
+from config.secrets import grok_api_key, grok_model, grok_personal_style, use_grok_for_openai, ai_provider
 from modules.ai.grokConnections import grok_create_client, grok_extract_skills, grok_answer_question
+from modules.ai.openaiConnections import ai_create_openai_client, ai_extract_skills, ai_answer_question
 
 def test_grok_integration():
     print("Testing Grok API Integration...")
@@ -71,6 +72,40 @@ def test_grok_integration():
     
     print("\n" + "-" * 50)
     print("✓ All tests completed successfully!")
+    
+def test_grok_redirect():
+    print("\n" + "=" * 50)
+    print("Testing Grok Redirect Feature...")
+    print(f"use_grok_for_openai: {use_grok_for_openai}")
+    print(f"ai_provider: {ai_provider}")
+    print("-" * 50)
+    
+    if use_grok_for_openai:
+        print("\n1. Testing OpenAI client creation with Grok redirect...")
+        client = ai_create_openai_client()
+        if not client:
+            print("Failed to create client.")
+            return
+        print("✓ Client created successfully (should be using Grok)")
+        
+        print("\n2. Testing OpenAI skill extraction with Grok redirect...")
+        job_desc = "Looking for a Python developer with 5 years experience"
+        skills = ai_extract_skills(client, job_desc, stream=False)
+        print(f"Skills extracted: {skills}")
+        
+        print("\n3. Testing OpenAI question answering with Grok redirect...")
+        answer = ai_answer_question(
+            client,
+            "What makes you a good fit for this role?",
+            question_type="text",
+            stream=False
+        )
+        print(f"Answer: {answer}")
+        
+        print("\n✓ Grok redirect tests completed!")
+    else:
+        print("use_grok_for_openai is False - redirect not active")
 
 if __name__ == "__main__":
     test_grok_integration()
+    test_grok_redirect()

@@ -180,6 +180,7 @@ def validate_secrets() -> None | ValueError | TypeError:
     check_string(grok_api_key, "grok_api_key")
     check_string(grok_model, "grok_model")
     check_string(grok_personal_style, "grok_personal_style")
+    check_boolean(use_grok_for_openai, "use_grok_for_openai")
     ##<
 
 
