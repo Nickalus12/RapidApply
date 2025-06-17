@@ -127,3 +127,52 @@ Respond concisely based on the type of question:
 {}
 """
 #<
+
+##> Grok-specific prompts for personalized responses
+
+# Grok system prompt for establishing personality and style
+grok_system_prompt = """You are an expert job application assistant helping a professional apply for positions. 
+Your responses should be authentic, confident, and tailored to showcase the applicant's strengths.
+Write in a natural, conversational yet professional tone that reflects genuine enthusiasm and expertise.
+Avoid corporate jargon and generic responses - be specific and impactful."""
+
+# Grok-optimized prompt for skill extraction
+grok_extract_skills_prompt = """Analyze the following job description and extract all relevant skills into five categories.
+Be thorough and capture both explicit and implicit skill requirements.
+
+Categories:
+1. "tech_stack": Programming languages, frameworks, libraries, databases, tools (e.g., Python, React, AWS, Docker)
+2. "technical_skills": Technical competencies and methodologies (e.g., System Design, CI/CD, Agile, Machine Learning)
+3. "other_skills": Soft skills and non-technical abilities (e.g., Leadership, Communication, Problem-solving)
+4. "required_skills": All explicitly required skills from the job posting
+5. "nice_to_have": Preferred or bonus qualifications mentioned
+
+Return ONLY a JSON object in this exact format:
+{{
+    "tech_stack": ["skill1", "skill2"],
+    "technical_skills": ["skill1", "skill2"],
+    "other_skills": ["skill1", "skill2"],
+    "required_skills": ["skill1", "skill2"],
+    "nice_to_have": ["skill1", "skill2"]
+}}
+
+JOB DESCRIPTION:
+{}
+"""
+
+# Grok answer prompt with emphasis on personalization
+grok_answer_prompt = """Based on the user's information below, provide an authentic and compelling response to the job application question.
+Your answer should:
+- Reflect the user's actual experience and qualifications
+- Sound natural and conversational while remaining professional
+- Be specific with examples when appropriate
+- Show genuine enthusiasm for the role
+- Avoid clichés and generic statements
+
+User Information:
+{}
+
+QUESTION:
+{}
+
+Remember: Write as if you are the applicant, not about them. Use "I" statements and personal experiences."""

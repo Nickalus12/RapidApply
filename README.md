@@ -43,7 +43,7 @@ RapidApply is an advanced automation tool that revolutionizes the job applicatio
 ### 🚀 Core Automation
 - **Smart Job Search**: Configurable filters for location, salary, experience level, and more
 - **Auto-Apply**: One-click applications with intelligent form filling
-- **Question Answering**: AI-powered responses to application questions
+- **Question Answering**: AI-powered responses to application questions (OpenAI, DeepSeek, Grok)
 - **Resume Customization**: Dynamic resume generation based on job requirements
 - **Multi-Profile Support**: Manage multiple LinkedIn accounts seamlessly
 
@@ -143,7 +143,17 @@ use_ai_answers = True      # Enable AI for questions
 ### 4. AI Configuration (`config/secrets.py`)
 Add your API keys (optional):
 ```python
-openai_api_key = "your-api-key-here"
+# Choose your AI provider
+ai_provider = "grok"  # Options: "openai", "deepseek", "grok"
+
+# For Grok (Recommended)
+grok_api_key = "your-grok-api-key"
+grok_personal_style = "Your communication style preferences"
+
+# For OpenAI
+openai_api_key = "your-openai-key"
+
+# LinkedIn credentials (optional)
 linkedin_email = "your-email@example.com"
 linkedin_password = "your-password"
 ```

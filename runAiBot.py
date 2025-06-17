@@ -32,7 +32,7 @@ from selenium.common.exceptions import NoSuchElementException, ElementClickInter
 from config.personals import *
 from config.questions import *
 from config.search import *
-from config.secrets import use_AI, username, password, ai_provider
+from config.secrets import use_AI, username, password, ai_provider, grok_personal_style
 from config.settings import *
 
 from modules.open_chrome import *
@@ -41,6 +41,7 @@ from modules.clickers_and_finders import *
 from modules.validator import validate_config
 from modules.ai.openaiConnections import ai_create_openai_client, ai_extract_skills, ai_answer_question, ai_close_openai_client
 from modules.ai.deepseekConnections import deepseek_create_client, deepseek_extract_skills, deepseek_answer_question
+from modules.ai.grokConnections import grok_create_client, grok_extract_skills, grok_answer_question
 
 from typing import Literal
 
@@ -632,6 +633,8 @@ def answer_questions(modal: WebElement, questions_list: set, work_location: str,
                                 answer = ai_answer_question(aiClient, label_org, question_type="text", job_description=job_description, user_information_all=user_information_all)
                             elif ai_provider.lower() == "deepseek":
                                 answer = deepseek_answer_question(aiClient, label_org, options=None, question_type="text", job_description=job_description, about_company=None, user_information_all=user_information_all)
+                            elif ai_provider.lower() == "grok":
+                                answer = grok_answer_question(aiClient, label_org, options=None, question_type="text", job_description=job_description, about_company=None, user_information_all=user_information_all, personal_style=grok_personal_style)
                             else:
                                 randomly_answered_questions.add((label_org, "text"))
                                 answer = years_of_experience
@@ -676,6 +679,8 @@ def answer_questions(modal: WebElement, questions_list: set, work_location: str,
                                 answer = ai_answer_question(aiClient, label_org, question_type="textarea", job_description=job_description, user_information_all=user_information_all)
                             elif ai_provider.lower() == "deepseek":
                                 answer = deepseek_answer_question(aiClient, label_org, options=None, question_type="textarea", job_description=job_description, about_company=None, user_information_all=user_information_all)
+                            elif ai_provider.lower() == "grok":
+                                answer = grok_answer_question(aiClient, label_org, options=None, question_type="textarea", job_description=job_description, about_company=None, user_information_all=user_information_all, personal_style=grok_personal_style)
                             else:
                                 randomly_answered_questions.add((label_org, "textarea"))
                                 answer = ""
@@ -971,6 +976,8 @@ def apply_to_jobs(search_terms: list[str]) -> None:
                                 skills = ai_extract_skills(aiClient, description)
                             elif ai_provider.lower() == "deepseek":
                                 skills = deepseek_extract_skills(aiClient, description)
+                            elif ai_provider.lower() == "grok":
+                                skills = grok_extract_skills(aiClient, description)
                             else:
                                 skills = "In Development"
                             print_lg(f"Extracted skills using {ai_provider} AI")
@@ -1142,8 +1149,10 @@ def main() -> None:
                 aiClient = ai_create_openai_client()
             elif ai_provider.lower() == "deepseek":
                 aiClient = deepseek_create_client()
+            elif ai_provider.lower() == "grok":
+                aiClient = grok_create_client()
             else:
-                print_lg(f"Unknown AI provider: {ai_provider}. Supported providers are: openai, deepseek")
+                print_lg(f"Unknown AI provider: {ai_provider}. Supported providers are: openai, deepseek, grok")
                 aiClient = None
             ##<
         # Start applying to jobs
@@ -1204,7 +1213,9 @@ def main() -> None:
                 if ai_provider.lower() == "openai":
                     ai_close_openai_client(aiClient)
                 elif ai_provider.lower() == "deepseek":
-                    ai_close_openai_client(aiClient)  
+                    ai_close_openai_client(aiClient)
+                elif ai_provider.lower() == "grok":
+                    ai_close_openai_client(aiClient)  # Grok uses OpenAI-compatible client  
                 print_lg(f"Closed {ai_provider} AI client.")
             except Exception as e:
                 print_lg("Failed to close AI client:", e)
