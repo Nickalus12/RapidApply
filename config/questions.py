@@ -22,7 +22,7 @@ version:    24.12.29.12.30
 default_resume_path = "all resumes/default/resume.pdf"      # (In Development)
 
 # What do you want to answer for questions that ask about years of experience you have, this is different from current_experience? 
-years_of_experience = "5"          # A number in quotes Eg: "0","1","2","3","4", etc.
+years_of_experience = "4"          # A number in quotes Eg: "0","1","2","3","4", etc.
 
 # Do you need visa sponsorship now or in future?
 require_visa = "No"               # "Yes" or "No"
@@ -82,12 +82,15 @@ then it will divide by 30 or 7 and answer respectively. Examples:
 '''
 
 # Your LinkedIn headline in quotes Eg: "Software Engineer @ Google, Masters in Computer Science", "Recent Grad Student @ MIT, Computer Science"
-linkedin_headline = "Full Stack Developer with Backelors in Computer Science and 5+ years of experience" # "Headline" or "" to leave this question unanswered
+linkedin_headline = "Prophet 21 Developer | ERP Implementation Specialist | Full Stack Developer" # "Headline" or "" to leave this question unanswered
 
 # Your summary in quotes, use \n to add line breaks if using single quotes "Summary".You can skip \n if using triple quotes """Summary"""
 linkedin_summary = """
-I'm a Senior Software Engineer at Amazon with Masters in CS and 4+ years of experience in developing and maintaining Full Stack Web applications and cloud solutions. 
-Specialized in React, Node.js, and Python.
+As a Prophet 21 Developer, I specialize in developing and implementing customized ERP solutions that streamline business operations and enhance efficiency. With 4 years of experience in ERP development and implementation, I bring expertise in both technical development and business process optimization.
+
+My experience includes full-stack development, database management, and creating custom integrations that connect ERP systems with other business applications. I'm passionate about leveraging technology to solve complex business challenges and improve operational workflows.
+
+Currently based in Houston, Texas, I'm open to opportunities that allow me to continue growing my skills in ERP development, full-stack development, and enterprise software solutions.
 """
 
 '''
@@ -103,7 +106,70 @@ Cover Letter
 # Your user_information_all letter in quotes, use \n to add line breaks if using single quotes "user_information_all".You can skip \n if using triple quotes """user_information_all""" (This question makes sense though)
 # We use this to pass to AI to generate answer from information , Assuing Information contians eg: resume  all the information like name, experience, skills, Country, any illness etc. 
 user_information_all ="""
-User Information
+Name: Nickalus Peter Brewer
+Location: Humble, Texas, United States
+Email: NickalusBrewer@gmail.com
+Phone: 9858690859
+Years of Experience: 4 years
+
+Current Position: Prophet 21 Developer at Numtrix
+Education: Bachelor's Degree in Computer Science from Full Sail University
+
+TECHNICAL SKILLS:
+ERP Systems:
+- Prophet 21 (Expert level - 4 years)
+- ERP Implementation and Customization
+- Business Process Automation
+- System Integration
+
+Programming Languages:
+- C# / .NET (Prophet 21 development)
+- SQL (Database queries and stored procedures)
+- JavaScript
+- Python
+- HTML/CSS
+
+Databases:
+- Microsoft SQL Server
+- Database Design and Optimization
+- ETL Processes
+- Data Migration
+
+Full Stack Development:
+- Front-end Development
+- Back-end Development
+- API Development and Integration
+- Web Services (REST/SOAP)
+
+Tools & Technologies:
+- Visual Studio
+- Git/GitHub
+- Prophet 21 SDK
+- Crystal Reports
+- SSRS (SQL Server Reporting Services)
+- IIS (Internet Information Services)
+
+Business Skills:
+- Requirements Gathering
+- Business Process Analysis
+- Technical Documentation
+- Client Training and Support
+- Project Management
+
+Specializations:
+- Prophet 21 Customizations
+- ERP Module Development
+- Inventory Management Systems
+- Order Processing Automation
+- Financial System Integration
+- Custom Report Development
+- Workflow Automation
+
+Industry Experience:
+- Distribution
+- Manufacturing
+- Wholesale
+- Supply Chain Management
 """
 ##<
 '''

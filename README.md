@@ -44,6 +44,7 @@ RapidApply is an advanced automation tool that revolutionizes the job applicatio
 - **Smart Job Search**: Configurable filters for location, salary, experience level, and more
 - **Auto-Apply**: One-click applications with intelligent form filling
 - **Question Answering**: AI-powered responses to application questions (OpenAI, DeepSeek, Grok)
+- **Smart Resume Selection**: AI automatically selects the best resume variant for each job
 - **Resume Customization**: Dynamic resume generation based on job requirements
 - **Multi-Profile Support**: Manage multiple LinkedIn accounts seamlessly
 
@@ -157,6 +158,21 @@ openai_api_key = "your-openai-key"
 # LinkedIn credentials (optional)
 linkedin_email = "your-email@example.com"
 linkedin_password = "your-password"
+```
+
+### 5. Smart Resume Selection (`config/settings.py`)
+Enable AI-powered resume selection:
+```python
+use_smart_resume_selection = True  # Enable smart selection
+
+# Organize your resumes in the 'resumes' folder:
+# resumes/
+# ├── technical/
+# │   └── backend_engineer_resume.pdf
+# ├── management/
+# │   └── tech_lead_resume.pdf
+# └── general/
+#     └── software_engineer_resume.pdf
 ```
 
 ## 🏗️ Enterprise Architecture

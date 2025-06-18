@@ -7,7 +7,27 @@ logs
 
 old
 
-secrets.py
+config/secrets.py
 config/personals.py
 .venv
 apikeys.py
+secrets.py
+
+# Additional sensitive files
+*.log
+behavior_stats.json
+selection_history.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+# IDE
+.idea/
+*.swp
+*.swo
