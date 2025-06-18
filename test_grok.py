@@ -44,6 +44,9 @@ def test_grok_integration():
     # Test different question types
     questions = [
         ("How many years of Python experience do you have?", "text"),
+        ("How long have you been working with LLMs?", "text"),
+        ("Enter a decimal number larger than 0.0", "text"),
+        ("On a scale of 1-10, rate your React.js expertise", "text"),
         ("Why are you interested in this position?", "textarea"),
         ("Are you authorized to work in the United States?", "text"),
         ("Describe a challenging technical problem you solved.", "textarea")

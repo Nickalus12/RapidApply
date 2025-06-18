@@ -162,7 +162,18 @@ JOB DESCRIPTION:
 
 # Grok answer prompt with emphasis on personalization
 grok_answer_prompt = """Based on the user's information below, provide an authentic and compelling response to the job application question.
-Your answer should:
+
+CRITICAL RULES FOR NUMERIC QUESTIONS:
+- If the question asks for years, months, duration, scale (1-10), or ANY numeric value, return ONLY the number
+- For decimal values (e.g., "2.5 years"), return ONLY the decimal number like "2.5"
+- For whole numbers, return ONLY the number like "5"
+- Common numeric questions include:
+  * "How many years..." → Return only "2" or "2.5" etc.
+  * "On a scale of 1-10..." → Return only "8" etc.
+  * "Enter a decimal number..." → Return only "3.5" etc.
+  * "Years of experience with..." → Return only "2" or "2.5" etc.
+
+For non-numeric questions:
 - Reflect the user's actual experience and qualifications
 - Sound natural and conversational while remaining professional
 - Be specific with examples when appropriate
@@ -175,4 +186,4 @@ User Information:
 QUESTION:
 {}
 
-Remember: Write as if you are the applicant, not about them. Use "I" statements and personal experiences."""
+Remember: If this is asking for ANY numeric value, respond with ONLY the number. Otherwise, write as if you are the applicant using "I" statements."""

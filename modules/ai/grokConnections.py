@@ -211,6 +211,20 @@ def grok_answer_question(
     try:
         print_lg(f"Answering question using Grok AI: {question}")
         
+        # Check if this is a numeric question that needs special handling
+        numeric_keywords = [
+            'how many years', 'how long', 'years of experience', 'months of experience',
+            'scale of 1-10', 'scale from 1 to 10', 'rate yourself',
+            'enter a decimal', 'decimal number', 'numeric value',
+            'number of years', 'years have you', 'how much experience'
+        ]
+        
+        question_lower = question.lower()
+        is_numeric_question = any(keyword in question_lower for keyword in numeric_keywords)
+        
+        if is_numeric_question:
+            print_lg("Detected numeric question - will request number-only response")
+        
         # Prepare user information
         user_info = user_information_all or ""
         
@@ -221,6 +235,10 @@ def grok_answer_question(
         
         # Prepare the main prompt
         prompt = grok_answer_prompt.format(user_info, question)
+        
+        # Add extra emphasis for numeric questions
+        if is_numeric_question:
+            prompt += "\n\nREMINDER: This question is asking for a NUMERIC value. Return ONLY the number (e.g., '2', '2.5', '10')."
         
         # Add options to the prompt if available
         if options and (question_type in ['single_select', 'multiple_select']):
@@ -258,7 +276,9 @@ def grok_answer_question(
         
         # Adjust temperature based on question type
         temperature = 0.7  # Default for creative, human-like responses
-        if question_type in ['single_select', 'multiple_select']:
+        if is_numeric_question:
+            temperature = 0.0  # Zero temperature for numeric responses to ensure consistency
+        elif question_type in ['single_select', 'multiple_select']:
             temperature = 0.3  # Lower for factual selections
         elif "years" in question.lower() or "experience" in question.lower():
             temperature = 0.1  # Very low for numeric responses
@@ -270,6 +290,16 @@ def grok_answer_question(
             temperature=temperature,
             stream=stream
         )
+        
+        # Post-process numeric responses to ensure they're clean
+        if is_numeric_question and isinstance(result, str):
+            # Extract just the number from the response
+            import re
+            # Match integers or decimals
+            number_match = re.search(r'^\d+\.?\d*', result.strip())
+            if number_match:
+                result = number_match.group()
+                print_lg(f"Extracted numeric value: {result}")
         
         return result
     except Exception as e:
