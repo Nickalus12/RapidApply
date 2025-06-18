@@ -32,7 +32,7 @@ from selenium.common.exceptions import NoSuchElementException, ElementClickInter
 from config.personals import *
 from config.questions import *
 from config.search import *
-from config.secrets import use_AI, username, password, ai_provider
+from config.secrets import use_AI, username, password, ai_provider, grok_personal_style
 from config.settings import *
 
 from modules.open_chrome import *
@@ -41,6 +41,8 @@ from modules.clickers_and_finders import *
 from modules.validator import validate_config
 from modules.ai.openaiConnections import ai_create_openai_client, ai_extract_skills, ai_answer_question, ai_close_openai_client
 from modules.ai.deepseekConnections import deepseek_create_client, deepseek_extract_skills, deepseek_answer_question
+from modules.ai.grokConnections import grok_create_client, grok_extract_skills, grok_answer_question
+from modules.resumes.smart_selector import SmartResumeSelector
 
 from typing import Literal
 
@@ -63,6 +65,8 @@ full_name = first_name + " " + middle_name + " " + last_name if middle_name else
 
 useNewResume = True
 randomly_answered_questions = set()
+resume_selector = None  # Will be initialized if smart resume selection is enabled
+aiClient = None  # Will be initialized if AI is enabled
 
 tabs_count = 1
 easy_applied_count = 0
@@ -408,12 +412,38 @@ def get_job_description(
         
 
 
-# Function to upload resume
-def upload_resume(modal: WebElement, resume: str) -> tuple[bool, str]:
+# Function to upload resume with smart selection
+def upload_resume(modal: WebElement, resume: str, job_info: dict = None) -> tuple[bool, str]:
+    global resume_selector
+    
+    # Try smart resume selection if enabled
+    if use_smart_resume_selection and resume_selector and job_info:
+        try:
+            print_lg("[Smart Resume] Selecting best resume for this job...")
+            selected_resume_path, selection_info = resume_selector.select_best_resume(
+                job_description=job_info.get('description', ''),
+                company_name=job_info.get('company', ''),
+                job_title=job_info.get('title', ''),
+                required_skills=job_info.get('skills', [])
+            )
+            
+            # Check if selected resume exists
+            if os.path.exists(selected_resume_path):
+                print_lg(f"[Smart Resume] Selected: {selection_info['selected_resume']} (confidence: {selection_info['confidence']:.2f})")
+                print_lg(f"[Smart Resume] Reason: {selection_info['reason']}")
+                resume = selected_resume_path
+            else:
+                print_lg(f"[Smart Resume] Selected resume not found, using default")
+                
+        except Exception as e:
+            print_lg(f"[Smart Resume] Selection failed: {str(e)}, using default")
+    
+    # Upload the resume
     try:
         modal.find_element(By.NAME, "file").send_keys(os.path.abspath(resume))
-        return True, os.path.basename(default_resume_path)
-    except: return False, "Previous resume"
+        return True, os.path.basename(resume)
+    except: 
+        return False, "Previous resume"
 
 # Function to answer common questions for Easy Apply
 def answer_common_questions(label: str, answer: str) -> str:
@@ -632,6 +662,8 @@ def answer_questions(modal: WebElement, questions_list: set, work_location: str,
                                 answer = ai_answer_question(aiClient, label_org, question_type="text", job_description=job_description, user_information_all=user_information_all)
                             elif ai_provider.lower() == "deepseek":
                                 answer = deepseek_answer_question(aiClient, label_org, options=None, question_type="text", job_description=job_description, about_company=None, user_information_all=user_information_all)
+                            elif ai_provider.lower() == "grok":
+                                answer = grok_answer_question(aiClient, label_org, options=None, question_type="text", job_description=job_description, about_company=None, user_information_all=user_information_all, personal_style=grok_personal_style)
                             else:
                                 randomly_answered_questions.add((label_org, "text"))
                                 answer = years_of_experience
@@ -676,6 +708,8 @@ def answer_questions(modal: WebElement, questions_list: set, work_location: str,
                                 answer = ai_answer_question(aiClient, label_org, question_type="textarea", job_description=job_description, user_information_all=user_information_all)
                             elif ai_provider.lower() == "deepseek":
                                 answer = deepseek_answer_question(aiClient, label_org, options=None, question_type="textarea", job_description=job_description, about_company=None, user_information_all=user_information_all)
+                            elif ai_provider.lower() == "grok":
+                                answer = grok_answer_question(aiClient, label_org, options=None, question_type="textarea", job_description=job_description, about_company=None, user_information_all=user_information_all, personal_style=grok_personal_style)
                             else:
                                 randomly_answered_questions.add((label_org, "textarea"))
                                 answer = ""
@@ -971,6 +1005,8 @@ def apply_to_jobs(search_terms: list[str]) -> None:
                                 skills = ai_extract_skills(aiClient, description)
                             elif ai_provider.lower() == "deepseek":
                                 skills = deepseek_extract_skills(aiClient, description)
+                            elif ai_provider.lower() == "grok":
+                                skills = grok_extract_skills(aiClient, description)
                             else:
                                 skills = "In Development"
                             print_lg(f"Extracted skills using {ai_provider} AI")
@@ -1006,7 +1042,15 @@ def apply_to_jobs(search_terms: list[str]) -> None:
                                         errored = "stuck"
                                         raise Exception("Seems like stuck in a continuous loop of next, probably because of new questions.")
                                     questions_list = answer_questions(modal, questions_list, work_location, job_description=description)
-                                    if useNewResume and not uploaded: uploaded, resume = upload_resume(modal, default_resume_path)
+                                    if useNewResume and not uploaded: 
+                                        # Prepare job info for smart resume selection
+                                        job_info = {
+                                            'title': title,
+                                            'company': company,
+                                            'description': description,
+                                            'skills': skills.split(', ') if isinstance(skills, str) else []
+                                        }
+                                        uploaded, resume = upload_resume(modal, default_resume_path, job_info)
                                     try: next_button = modal.find_element(By.XPATH, './/span[normalize-space(.)="Review"]') 
                                     except NoSuchElementException:  next_button = modal.find_element(By.XPATH, './/button[contains(span, "Next")]')
                                     try: next_button.click()
@@ -1108,10 +1152,13 @@ linkedIn_tab = False
 
 def main() -> None:
     try:
-        global linkedIn_tab, tabs_count, useNewResume, aiClient
+        global linkedIn_tab, tabs_count, useNewResume, aiClient, resume_selector
         alert_title = "Error Occurred. Closing Browser!"
         total_runs = 1        
         validate_config()
+        
+        # Initialize smart resume selector
+        resume_selector = None
         
         if not os.path.exists(default_resume_path):
             pyautogui.alert(text='Your default resume "{}" is missing! Please update it\'s folder path "default_resume_path" in config.py\n\nOR\n\nAdd a resume with exact name and path (check for spelling mistakes including cases).\n\n\nFor now the bot will continue using your previous upload from LinkedIn!'.format(default_resume_path), title="Missing Resume", button="OK")
@@ -1142,10 +1189,18 @@ def main() -> None:
                 aiClient = ai_create_openai_client()
             elif ai_provider.lower() == "deepseek":
                 aiClient = deepseek_create_client()
+            elif ai_provider.lower() == "grok":
+                aiClient = grok_create_client()
             else:
-                print_lg(f"Unknown AI provider: {ai_provider}. Supported providers are: openai, deepseek")
+                print_lg(f"Unknown AI provider: {ai_provider}. Supported providers are: openai, deepseek, grok")
                 aiClient = None
             ##<
+            
+            # Initialize smart resume selector with AI client
+            if aiClient and use_smart_resume_selection:
+                print_lg("Initializing smart resume selector...")
+                resume_selector = SmartResumeSelector(ai_client=aiClient)
+            
         # Start applying to jobs
         driver.switch_to.window(linkedIn_tab)
         total_runs = run(total_runs)
@@ -1204,7 +1259,9 @@ def main() -> None:
                 if ai_provider.lower() == "openai":
                     ai_close_openai_client(aiClient)
                 elif ai_provider.lower() == "deepseek":
-                    ai_close_openai_client(aiClient)  
+                    ai_close_openai_client(aiClient)
+                elif ai_provider.lower() == "grok":
+                    ai_close_openai_client(aiClient)  # Grok uses OpenAI-compatible client  
                 print_lg(f"Closed {ai_provider} AI client.")
             except Exception as e:
                 print_lg("Failed to close AI client:", e)

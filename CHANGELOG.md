@@ -8,10 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Nothing yet
+- Grok AI integration for personalized job application responses
+- Support for multiple Grok models (grok-2-latest, grok-2-mini, grok-3-latest)
+- Personal style configuration for authentic AI responses
+- `use_grok_for_openai` toggle to use Grok for all AI operations
+- Comprehensive Grok setup documentation
+- Test script for Grok integration verification
 
 ### Changed
-- Nothing yet
+- Updated AI provider selection to include Grok
+- Enhanced question answering with personality matching
+- Improved skill extraction with Grok-optimized prompts
+
 
 ### Deprecated
 - Nothing yet

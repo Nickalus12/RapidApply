@@ -89,6 +89,15 @@ showAiErrorAlerts = True            # True or False, Note: True or False are cas
 # Use ChatGPT for resume building (Experimental Feature can break the application. Recommended to leave it as False) 
 # use_resume_generator = False       # True or False, Note: True or False are case-sensitive ,   This feature may only work with 'stealth_mode = True'. As ChatGPT website is hosted by CloudFlare which is protected by Anti-bot protections!
 
+# Smart Resume Selection
+# Enable AI-powered resume selection based on job requirements
+use_smart_resume_selection = True    # True or False, Note: True or False are case-sensitive
+'''
+Note: This feature uses AI to automatically select the best resume for each job from your "resumes" folder.
+Place multiple resume variants in the "resumes" folder and its subfolders (technical, management, general, custom).
+If disabled or no AI is available, it will use the default resume.
+'''
+
 
 
 

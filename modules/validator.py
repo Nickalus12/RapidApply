@@ -167,11 +167,20 @@ def validate_secrets() -> None | ValueError | TypeError:
     check_boolean(stream_output, "stream_output")
     
     ##> ------ Yang Li : MARKYangL - Feature ------
+    # Validate AI provider configuration
+    check_string(ai_provider, "ai_provider", ["openai", "deepseek", "grok"])
+    
     # Validate DeepSeek configuration
-    check_string(ai_provider, "ai_provider", ["openai", "deepseek"])
     check_string(deepseek_api_url, "deepseek_api_url", min_length=5)
     check_string(deepseek_api_key, "deepseek_api_key")
     check_string(deepseek_model, "deepseek_model", ["deepseek-chat", "deepseek-reasoner"])
+    
+    # Validate Grok configuration
+    check_string(grok_api_url, "grok_api_url", min_length=5)
+    check_string(grok_api_key, "grok_api_key")
+    check_string(grok_model, "grok_model")
+    check_string(grok_personal_style, "grok_personal_style")
+    check_boolean(use_grok_for_openai, "use_grok_for_openai")
     ##<
 
 
