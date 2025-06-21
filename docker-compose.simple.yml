@@ -1,0 +1,22 @@
+services:
+  # API only
+  api:
+    build: .
+    container_name: rapidapply-api
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///rapidapply.db
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=development-secret-key
+    volumes:
+      - ./api:/app/api
+    restart: unless-stopped
+
+  # Redis only
+  redis:
+    image: redis:7-alpine
+    container_name: rapidapply-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped

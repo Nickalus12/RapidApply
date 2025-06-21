@@ -4,7 +4,7 @@ Security utilities for authentication and encryption
 
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
-import jwt
+from jose import jwt
 from typing import Optional, Dict, Any
 
 from api.config import settings

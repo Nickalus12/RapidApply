@@ -8,7 +8,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 from datetime import datetime, timedelta
-import jwt
+from jose import jwt
 
 from api.config import settings
 from api.utils.security import verify_password, hash_password, create_access_token
