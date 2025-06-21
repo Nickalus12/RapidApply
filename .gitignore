@@ -1,33 +1,124 @@
-__pycache__
-.vscode
-
-all excels
-all resumes
-logs
-
-old
-
-config/secrets.py
-config/personals.py
-.venv
-apikeys.py
-secrets.py
-
-# Additional sensitive files
-*.log
-behavior_stats.json
-selection_history.json
-
-# OS files
-.DS_Store
-Thumbs.db
-
 # Python
-*.pyc
-.pytest_cache/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
 *.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Virtual environments
+venv/
+ENV/
+env/
+rapidapply-env/
+.venv
 
 # IDE
+.vscode/
 .idea/
 *.swp
 *.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Next.js
+.next/
+out/
+build/
+
+# Docker
+.docker/
+
+# Uploads
+uploads/
+temp/
+
+# Credentials
+config/credentials.json
+config/secrets.py
+config/personals.py
+config/*.json
+!config/example.json
+apikeys.py
+secrets.py
+
+# ML Models
+models/*.pkl
+models/*.pt
+models/*.h5
+
+# Cache
+.cache/
+*.cache
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Kubernetes
+kubeconfig
+
+# Testing
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Production
+*.pem
+*.key
+*.crt
+
+# Legacy folders
+old/
+all excels/
+all resumes/
+
+# Application specific
+behavior_stats.json
+selection_history.json
