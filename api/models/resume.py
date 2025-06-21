@@ -4,7 +4,7 @@ Resume database model
 
 from sqlalchemy import Column, String, Boolean, DateTime, Integer, JSON, ForeignKey, Text, Float
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
-from pgvector.sqlalchemy import Vector
+# from pgvector.sqlalchemy import Vector  # Temporarily disabled
 from sqlalchemy.orm import relationship
 import uuid
 from datetime import datetime
@@ -56,7 +56,7 @@ class Resume(Base):
     full_text = Column(Text)
     
     # AI embeddings for semantic search
-    embedding = Column(Vector(1536))  # OpenAI embeddings dimension
+    # embedding = Column(Vector(1536))  # OpenAI embeddings dimension - temporarily disabled
     
     # Skills and keywords
     extracted_skills = Column(ARRAY(String), default=[])

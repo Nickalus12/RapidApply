@@ -2,7 +2,7 @@
 
 -- Create extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "pgvector";
+-- CREATE EXTENSION IF NOT EXISTS "pgvector"; -- Will add this later with proper image
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
 -- Create database if not exists
