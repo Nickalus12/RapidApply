@@ -16,8 +16,8 @@ from api.config import settings
 from api.middleware.rate_limit import RateLimitMiddleware
 from api.middleware.logging import LoggingMiddleware
 from api.routers import auth, jobs, applications, users, analytics, resumes
-from api.utils.database import init_db
-from api.utils.redis_client import init_redis
+# from api.utils.database import init_db
+# from api.utils.redis_client import init_redis
 
 # Configure logging
 logging.basicConfig(
@@ -32,8 +32,8 @@ async def lifespan(app: FastAPI):
     """Handle application startup and shutdown events"""
     # Startup
     logger.info("Starting RapidApply API v2.0...")
-    await init_db()
-    await init_redis()
+    # await init_db()  # Temporarily disabled
+    # await init_redis()  # Temporarily disabled
     logger.info("Application startup complete")
     
     yield
@@ -68,7 +68,7 @@ app.add_middleware(
     allowed_hosts=settings.ALLOWED_HOSTS
 )
 
-app.add_middleware(RateLimitMiddleware)
+# app.add_middleware(RateLimitMiddleware)  # Temporarily disabled
 app.add_middleware(LoggingMiddleware)
 
 
