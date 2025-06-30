@@ -26,6 +26,15 @@ Note: RECOMMENDED TO LEAVE IT AS `True`, if you set it `False`, be sure to CLOSE
 # Follow easy applied companies
 follow_companies = False            # True or False, Note: True or False are case-sensitive
 
+# Auto-apply job search filters 
+auto_apply_filters = False          # True or False - If False, you can manually set filters before the bot starts applying
+'''
+Note: 
+- If True: Bot automatically applies filters from config/search.py when it starts
+- If False: Bot will pause and wait for you to manually set your preferred filters on LinkedIn
+- Recommended: False if you want control over filtering, True for full automation
+'''
+
 ## Upcoming features (In Development)
 # # Send connection requests to HR's 
 # connect_hr = True                  # True or False, Note: True or False are case-sensitive
