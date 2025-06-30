@@ -1,0 +1,145 @@
+services:
+  # API Gateway
+  api:
+    build: .
+    container_name: rapidapply-api
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://rapidapply:rapidapply123@postgres:5432/rapidapply
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - JWT_SECRET=${JWT_SECRET:-your-secret-key-change-this}
+      - AI_PROVIDERS_CONFIG=/app/config/ai_providers.json
+    volumes:
+      - ./api:/app/api
+      - ./config:/app/config
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - rapidapply-network
+    restart: unless-stopped
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: rapidapply-postgres
+    environment:
+      - POSTGRES_USER=rapidapply
+      - POSTGRES_PASSWORD=rapidapply123
+      - POSTGRES_DB=rapidapply
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infrastructure/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - rapidapply-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rapidapply"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: rapidapply-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - rapidapply-network
+    restart: unless-stopped
+
+  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rapidapply-rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - rapidapply-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Celery Worker
+  celery-worker:
+    build: .
+    container_name: rapidapply-celery-worker
+    command: celery -A api.celery_app worker --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://rapidapply:rapidapply123@postgres:5432/rapidapply
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+    volumes:
+      - ./api:/app/api
+      - ./logs:/app/logs
+    depends_on:
+      - redis
+      - rabbitmq
+      - postgres
+    networks:
+      - rapidapply-network
+    restart: unless-stopped
+
+  # Celery Beat Scheduler
+  celery-beat:
+    build: .
+    container_name: rapidapply-celery-beat
+    command: celery -A api.celery_app beat --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://rapidapply:rapidapply123@postgres:5432/rapidapply
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+    volumes:
+      - ./api:/app/api
+    depends_on:
+      - redis
+      - rabbitmq
+      - postgres
+    networks:
+      - rapidapply-network
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: rapidapply-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infrastructure/docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./infrastructure/docker/nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - api
+    networks:
+      - rapidapply-network
+    restart: unless-stopped
+
+networks:
+  rapidapply-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  rabbitmq-data:

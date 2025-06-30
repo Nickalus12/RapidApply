@@ -233,9 +233,32 @@ def grok_answer_question(
         if personal_style:
             system_message += f"\n\nPersonal Style Guidelines:\n{personal_style}"
         
-        # Prepare the main prompt
-        prompt = grok_answer_prompt.format(user_info, question)
+        # Extract company name from question or job context for intelligent analysis
+        company_context = ""
+        if about_company:
+            company_context = f"\n\nCOMPANY CONTEXT: {about_company}"
+        elif job_description:
+            # Try to extract company name from job description
+            import re
+            company_match = re.search(r'(?:at |with |for |join )([A-Z][a-zA-Z\s&.,]+?)(?:\s|,|\.|\n|$)', job_description)
+            if company_match:
+                company_context = f"\n\nCOMPANY BEING APPLIED TO: {company_match.group(1).strip()}"
         
+        # Prepare the main prompt with enhanced context
+        prompt = grok_answer_prompt.format(user_info, question)
+        prompt += company_context
+        
+        # Add intelligent analysis for relationship/company questions
+        question_lower = question.lower()
+        if any(keyword in question_lower for keyword in ['worked at', 'employee', 'relationship', 'know', 'familiar']):
+            prompt += f"""
+            
+CRITICAL CONTEXT ANALYSIS FOR THIS QUESTION:
+This question is asking about connections/relationships with the company being applied to.
+REFERENCE: Check the work history in the user information above.
+LOGIC: If the company mentioned in this question is NOT in the work history, answer "No".
+IMPORTANT: Do not assume any connections that don't exist in the factual work history."""
+
         # Add extra emphasis for numeric questions
         if is_numeric_question:
             prompt += "\n\nREMINDER: This question is asking for a NUMERIC value. Return ONLY the number (e.g., '2', '2.5', '10')."
@@ -244,6 +267,10 @@ def grok_answer_question(
         if options and (question_type in ['single_select', 'multiple_select']):
             options_str = "OPTIONS:\n" + "\n".join([f"- {option}" for option in options])
             prompt += f"\n\n{options_str}"
+            
+            # Add specific guidance for demographic/salary questions with options
+            if any(keyword in question_lower for keyword in ['gender', 'race', 'ethnicity', 'sexual orientation', 'transgender', 'salary', 'compensation']):
+                prompt += "\n\nIMPORTANT: This is a demographic or salary question. Refer to the DEMOGRAPHIC QUESTIONS or SALARY QUESTIONS section in the instructions above."
             
             if question_type == 'single_select':
                 prompt += "\n\nPlease select exactly ONE option from the list above that best matches the user's profile and the job requirements."
@@ -265,7 +292,11 @@ def grok_answer_question(
         
         # Adjust response style based on question type
         if question_type == 'textarea':
-            prompt += "\n\nThis is a long-form response. Write a compelling, professional answer that showcases relevant experience and enthusiasm."
+            # Check if this is a cover letter or similar long-form question
+            if any(keyword in question_lower for keyword in ['cover', 'letter', 'motivation', 'why are you', 'why do you want', 'tell us about yourself']):
+                prompt += "\n\nThis is a COVER LETTER or motivation letter request. Follow the COVER LETTER GUIDELINES above. Write a professional, engaging cover letter that connects the user's experience to this specific job opportunity."
+            else:
+                prompt += "\n\nThis is a long-form response. Write a compelling, professional answer that showcases relevant experience and enthusiasm."
         elif question_type == 'text':
             prompt += "\n\nKeep your response concise but impactful."
         
@@ -291,15 +322,31 @@ def grok_answer_question(
             stream=stream
         )
         
-        # Post-process numeric responses to ensure they're clean
-        if is_numeric_question and isinstance(result, str):
-            # Extract just the number from the response
+        # Post-process responses to ensure they're clean
+        if isinstance(result, str):
+            # Remove any parenthetical notes or disclaimers
             import re
-            # Match integers or decimals
-            number_match = re.search(r'^\d+\.?\d*', result.strip())
-            if number_match:
-                result = number_match.group()
-                print_lg(f"Extracted numeric value: {result}")
+            # Remove content in parentheses that contains "Note:" or similar
+            result = re.sub(r'\s*\([^)]*(?:Note:|note:|This|Based on|Response)[^)]*\)', '', result)
+            # Remove standalone note lines
+            result = re.sub(r'\n*\(?\s*Note:.*$', '', result, flags=re.MULTILINE | re.IGNORECASE)
+            
+            if is_numeric_question:
+                # Extract just the number from the response
+                # Match integers or decimals
+                number_match = re.search(r'^\d+\.?\d*', result.strip())
+                if number_match:
+                    result = number_match.group()
+                    print_lg(f"Extracted numeric value: {result}")
+            
+            # Handle demographic questions that return descriptive answers
+            if any(keyword in question_lower for keyword in ['gender', 'race', 'ethnicity', 'sexual orientation', 'transgender']):
+                # Clean up common AI additions
+                result = result.replace("I identify as ", "").replace("My gender is ", "")
+                result = result.replace("I am ", "").replace("Select ", "")
+                
+            # Clean up any trailing whitespace
+            result = result.strip()
         
         return result
     except Exception as e:

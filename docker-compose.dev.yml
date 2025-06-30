@@ -1,0 +1,61 @@
+version: '3.8'
+
+# Development override configuration
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - DEBUG=True
+      - RELOAD=True
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+
+  postgres:
+    ports:
+      - "5432:5432"
+
+  redis:
+    ports:
+      - "6379:6379"
+
+  # Development tools
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: rapidapply-pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@rapidapply.com
+      - PGADMIN_DEFAULT_PASSWORD=admin123
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - rapidapply-network
+
+  # Redis Commander
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: rapidapply-redis-commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - rapidapply-network
+
+  # Mailhog for email testing
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: rapidapply-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - rapidapply-network

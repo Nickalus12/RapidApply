@@ -18,6 +18,8 @@ import os
 import csv
 import re
 import pyautogui
+import signal
+import sys
 
 from random import choice, shuffle, randint
 from datetime import datetime
@@ -30,6 +32,123 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException, NoSuchWindowException, ElementNotInteractableException
 
 from config.personals import *
+# Import additional demographic config (using try/except for backward compatibility)
+try:
+    from config.personals import sexual_orientation, transgender, min_salary, target_salary, max_salary
+except ImportError:
+    sexual_orientation = "Decline"
+    transgender = "No"
+    min_salary = 80
+    target_salary = 100
+    max_salary = 120
+
+# Import technical skills config
+try:
+    from config.personals import (
+        work_with_apis_daily, work_with_ai_tools_daily, work_with_databases_daily,
+        work_with_cloud_daily, python_experience, javascript_experience,
+        sql_experience, cloud_experience, devops_experience, agile_experience,
+        remote_work_capable, hybrid_work_capable, onsite_work_capable
+    )
+except ImportError:
+    # Default values if not defined
+    work_with_apis_daily = "No"
+    work_with_ai_tools_daily = "No"
+    work_with_databases_daily = "No"
+    work_with_cloud_daily = "No"
+    python_experience = "No"
+    javascript_experience = "No"
+    sql_experience = "No"
+    cloud_experience = "No"
+    devops_experience = "No"
+    agile_experience = "No"
+    remote_work_capable = "Yes"
+    hybrid_work_capable = "Yes"
+    onsite_work_capable = "Yes"
+
+# Import employment type preferences
+try:
+    from config.personals import (
+        w2_employee_willing, c2c_willing, contractor_willing,
+        full_time_willing, part_time_willing, contract_to_hire_willing,
+        direct_hire_willing, third_party_willing, retainer_willing,
+        fixed_price_willing, hourly_willing
+    )
+except ImportError:
+    # Default values if not defined
+    w2_employee_willing = "Yes"
+    c2c_willing = "Yes"
+    contractor_willing = "Yes"
+    full_time_willing = "Yes"
+    part_time_willing = "Yes"
+    contract_to_hire_willing = "Yes"
+    direct_hire_willing = "Yes"
+    third_party_willing = "No"
+    retainer_willing = "Yes"
+    fixed_price_willing = "Yes"
+    hourly_willing = "Yes"
+
+# Import automation tools experience
+try:
+    from config.personals import (
+        zapier_experience, zapier_expert, make_integromat_experience,
+        make_integromat_expert, workflow_automation_years,
+        advanced_automations_count, automation_platforms
+    )
+except ImportError:
+    zapier_experience = "Yes"
+    zapier_expert = "Yes"
+
+# Import AI experience and employment status config
+try:
+    from config.personals import (
+        ai_project_experience, ai_product_experience, machine_learning_experience,
+        current_employee_status, prospective_employee, former_employee,
+        how_found_company, employee_referral, know_employees,
+        obligations_restrictions
+    )
+except ImportError:
+    ai_project_experience = "Yes"
+    ai_product_experience = "Yes"
+    machine_learning_experience = "Yes"
+    current_employee_status = "Not a current employee"
+    prospective_employee = "Yes"
+    former_employee = "No"
+    how_found_company = "LinkedIn"
+    employee_referral = "No"
+    know_employees = "No"
+    obligations_restrictions = "No"
+    make_integromat_experience = "Yes"
+    make_integromat_expert = "Yes"
+    workflow_automation_years = "4"
+    advanced_automations_count = "50"
+    automation_platforms = "Yes"
+
+# Import IT transformation and travel preferences
+try:
+    from config.personals import (
+        it_transformation_experience, operating_model_transformation,
+        ai_solutions_development, future_ready_operating_model,
+        it_functions_ai_integration, digital_transformation,
+        technology_modernization, travel_willing, travel_up_to_25_percent,
+        travel_up_to_40_percent, travel_up_to_50_percent, travel_up_to_75_percent,
+        international_travel, overnight_travel
+    )
+except ImportError:
+    it_transformation_experience = "Yes"
+    operating_model_transformation = "Yes"
+    ai_solutions_development = "Yes"
+    future_ready_operating_model = "Yes"
+    it_functions_ai_integration = "Yes"
+    digital_transformation = "Yes"
+    technology_modernization = "Yes"
+    travel_willing = "Yes"
+    travel_up_to_25_percent = "Yes"
+    travel_up_to_40_percent = "Yes"
+    travel_up_to_50_percent = "Yes"
+    travel_up_to_75_percent = "No"
+    international_travel = "Yes"
+    overnight_travel = "Yes"
 from config.questions import *
 from config.search import *
 from config.secrets import use_AI, username, password, ai_provider, grok_personal_style
@@ -43,8 +162,24 @@ from modules.ai.openaiConnections import ai_create_openai_client, ai_extract_ski
 from modules.ai.deepseekConnections import deepseek_create_client, deepseek_extract_skills, deepseek_answer_question
 from modules.ai.grokConnections import grok_create_client, grok_extract_skills, grok_answer_question
 from modules.resumes.smart_selector import SmartResumeSelector
+from modules.intelligent_questions import enhance_answer_with_intelligence, IntelligentQuestionAnalyzer
 
 from typing import Literal
+
+# Global variable to store the current company being applied to
+current_company_context = ""
+
+# Global flag for graceful shutdown
+shutdown_requested = False
+
+def signal_handler(signum, frame):
+    """Handle Ctrl+C gracefully"""
+    global shutdown_requested
+    shutdown_requested = True
+    print_lg("\n\nShutdown requested. Finishing current operation...")
+    print_lg("Press Ctrl+C again to force quit.")
+    # Allow force quit on second Ctrl+C
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 
 pyautogui.FAILSAFE = False
@@ -198,6 +333,14 @@ def apply_filters() -> None:
     Function to apply job search filters
     '''
     set_search_location()
+
+    # Check if auto-apply filters is disabled
+    if not auto_apply_filters:
+        print_lg("Auto-apply filters is disabled. Please manually set your filters on LinkedIn and then click OK.")
+        print_lg("When ready, click OK to continue...")
+        # Wait for user to manually set filters
+        pyautogui.confirm("Please manually set your filters on LinkedIn.\n\nClick OK when you're ready to continue.", "Manual Filter Setup", ["OK"])
+        return
 
     try:
         recommended_wait = 1 if click_gap < 1 else 0
@@ -371,17 +514,20 @@ def get_job_description(
     - `skipReason: str | None`
     - `skipMessage: str | None`
     '''
+    # Initialize variables to avoid UnboundLocalError
+    jobDescription = "Unknown"
+    experience_required = "Unknown"
+    skip = False
+    skipReason = None
+    skipMessage = None
+    
     try:
         ##> ------ Dheeraj Deshwal : dheeraj9811 - Feature ------
-        jobDescription = "Unknown"
+        # jobDescription already initialized above
         ##<
-        experience_required = "Unknown"
         found_masters = 0
         jobDescription = find_by_class(driver, "jobs-box__html-content").text
         jobDescriptionLow = jobDescription.lower()
-        skip = False
-        skipReason = None
-        skipMessage = None
         for word in bad_words:
             if word.lower() in jobDescriptionLow:
                 skipMessage = f'\n{jobDescription}\n\nContains bad word "{word}". Skipping this job!\n'
@@ -445,9 +591,149 @@ def upload_resume(modal: WebElement, resume: str, job_info: dict = None) -> tupl
     except: 
         return False, "Previous resume"
 
+# Function to select best salary option from dropdown
+def select_best_salary_option(options: list[str], target: int, minimum: int, maximum: int) -> str | None:
+    """
+    Intelligently select the best salary option from a list based on target salary.
+    """
+    import re
+    
+    best_option = None
+    best_score = float('inf')
+    
+    for option in options:
+        # Skip non-salary options
+        if option in ["Select an option", "Prefer not to say", "Decline"]:
+            continue
+            
+        # Extract numbers from the option text
+        numbers = re.findall(r'\d+', option.replace(',', ''))
+        if not numbers:
+            continue
+            
+        # Calculate average if range is given
+        if len(numbers) >= 2:
+            avg_salary = (int(numbers[0]) + int(numbers[1])) / 2
+        else:
+            avg_salary = int(numbers[0])
+            
+        # Adjust for 'k' notation (e.g., "80k" means 80000)
+        if 'k' in option.lower() and avg_salary < 1000:
+            avg_salary *= 1000
+            
+        # Skip if below minimum
+        if avg_salary < minimum * 1000:
+            continue
+            
+        # Calculate score (distance from target)
+        score = abs(avg_salary - target * 1000)
+        
+        # Prefer options below or at target over those above
+        if avg_salary > target * 1000:
+            score *= 1.5  # Penalty for being above target
+            
+        # Don't go above maximum
+        if avg_salary > maximum * 1000:
+            score *= 2  # Heavy penalty for exceeding maximum
+            
+        if score < best_score:
+            best_score = score
+            best_option = option
+    
+    return best_option
+
 # Function to answer common questions for Easy Apply
 def answer_common_questions(label: str, answer: str) -> str:
-    if 'sponsorship' in label or 'visa' in label: answer = require_visa
+    # BULLETPROOF FINAL FALLBACK LOGIC
+    global current_company_context
+    
+    # Standard questions first
+    if 'sponsorship' in label or 'visa' in label: 
+        answer = require_visa
+    elif 'authorization' in label and 'work' in label:
+        answer = "Yes"
+    elif 'eligible' in label and ('work' in label or 'employment' in label):
+        answer = "Yes"  
+    elif 'clearance' in label or 'security' in label:
+        answer = "No" if not security_clearance else "Yes"
+    elif 'background check' in label:
+        answer = "Yes"
+    elif 'drug test' in label or 'screening' in label:
+        answer = "Yes"
+    
+    # AI and technical experience questions
+    elif 'ai' in label and ('project' in label or 'product' in label or 'related' in label):
+        answer = ai_project_experience
+    elif 'ai' in label and 'experience' in label:
+        answer = ai_product_experience
+    elif 'machine learning' in label and ('experience' in label or 'worked' in label):
+        answer = machine_learning_experience
+    elif 'artificial intelligence' in label and ('experience' in label or 'worked' in label):
+        answer = ai_project_experience
+    
+    # Employment status questions
+    elif 'current employee' in label or 'currently employed' in label:
+        if current_company_context and current_company_context.lower() in label.lower():
+            answer = "No"  # Not currently employed at the company being applied to
+        else:
+            answer = current_employee_status
+    elif 'former employee' in label or 'previously employed' in label:
+        answer = former_employee
+    elif 'employment status' in label:
+        answer = current_employee_status
+    elif 'how did you find' in label or 'how did you hear' in label:
+        answer = how_found_company
+    elif 'employee referral' in label or 'referred by' in label:
+        answer = employee_referral
+    
+    # Employment type questions
+    elif 'w2' in label or 'w-2' in label:
+        answer = w2_employee_willing
+    elif 'direct' in label and ('employee' in label or 'hire' in label):
+        answer = direct_hire_willing
+    elif 'third party' in label or 'third-party' in label:
+        # Special handling: if they say "not able to work with third parties", we confirm we can join directly
+        if 'not' in label and 'able' in label and 'work with' in label:
+            answer = "Yes"  # Yes, we can join directly (not through third party)
+        else:
+            answer = third_party_willing
+    elif 'c2c' in label or 'corp-to-corp' in label or 'corp to corp' in label:
+        answer = c2c_willing
+    elif 'contractor' in label or '1099' in label:
+        answer = contractor_willing
+    elif 'full time' in label or 'full-time' in label or 'fulltime' in label:
+        answer = full_time_willing
+    elif 'part time' in label or 'part-time' in label or 'parttime' in label:
+        answer = part_time_willing
+    elif 'contract to hire' in label or 'contract-to-hire' in label:
+        answer = contract_to_hire_willing
+    
+    # BULLETPROOF COMPANY WORK HISTORY LOGIC - FINAL SAFETY NET
+    known_companies = ['numtrix', 'texcel', 'omegaone', 'shf inc', 'hermann park conservancy', 'bayou innovations']
+    
+    # Check if this is a company work history question
+    company_work_keywords = ['worked at', 'employed at', 'employment at', 'position at', 'job at', 'worked for', 'employed by']
+    is_company_work_question = any(keyword in label for keyword in company_work_keywords)
+    
+    if is_company_work_question:
+        # Default to "No" unless it's a known company
+        answer = "No"
+        
+        # Only answer "Yes" if the question mentions a known company
+        for known_company in known_companies:
+            if known_company in label.lower():
+                answer = "Yes"
+                print_lg(f"[Final Fallback] Recognized known company in question: {known_company}")
+                break
+        
+        if answer == "No":
+            print_lg(f"[Final Fallback] Company work question detected - defaulting to 'No' for unknown company")
+    
+    # Additional relationship safety net
+    elif any(rel_keyword in label for rel_keyword in ['relationship', 'know', 'familiar', 'friend', 'relative']):
+        answer = "No"
+        print_lg(f"[Final Fallback] Relationship question detected - answering 'No'")
+    
     return answer
 
 
@@ -470,7 +756,6 @@ def answer_questions(modal: WebElement, questions_list: set, work_location: str,
                 label = Question.find_element(By.TAG_NAME, "label")
                 label_org = label.find_element(By.TAG_NAME, "span").text
             except: pass
-            answer = 'Yes'
             label = label_org.lower()
             select = Select(select)
             selected_option = select.first_selected_option.text
@@ -480,10 +765,199 @@ def answer_questions(modal: WebElement, questions_list: set, work_location: str,
                 optionsText = [option.text for option in select.options]
                 options = "".join([f' "{option}",' for option in optionsText])
             prev_answer = selected_option
+            
+            # Set appropriate default answer based on question type - SMART EMAIL PRIORITY
+            if 'email' in label:
+                # Smart email selection - prioritize application email
+                preferred_emails = [email, "NickalusBrewer@gmail.com"]  # Your primary application email
+                answer = email  # Default to application email
+            elif 'phone' in label and 'country' in label:
+                answer = "United States (+1)"
+            elif 'gender' in label or 'sex' in label: 
+                answer = gender
+            elif 'disability' in label: 
+                answer = disability_status
+            elif 'race' in label or 'racial' in label or 'ethnic' in label:
+                # Map ethnicity to dropdown options
+                if ethnicity == "White":
+                    answer = "White"
+                elif ethnicity == "Black":
+                    answer = "Black or African American"
+                elif ethnicity == "Asian":
+                    answer = "Asian"
+                elif ethnicity == "Hispanic/Latino":
+                    answer = "Hispanic or Latino"
+                else:
+                    answer = ethnicity if ethnicity else "Decline"
+            elif 'sexual orientation' in label:
+                answer = sexual_orientation
+            elif 'transgender' in label:
+                answer = transgender
+            elif 'veteran' in label:
+                answer = veteran_status
+            elif 'salary' in label or 'compensation' in label or 'pay' in label:
+                # Smart salary selection - choose the option closest to target_salary
+                if optionsText:
+                    best_option = select_best_salary_option(optionsText, target_salary, min_salary, max_salary)
+                    if best_option:
+                        answer = best_option
+                    else:
+                        answer = optionsText[0]  # Default to first option if no match
+            elif 'proficiency' in label: 
+                answer = 'Professional'
+            # Handle technical skills questions
+            elif 'api' in label and ('daily' in label or 'work with' in label or 'experience' in label):
+                answer = work_with_apis_daily
+            elif 'ai' in label and 'tool' in label and ('daily' in label or 'work with' in label):
+                answer = work_with_ai_tools_daily
+            elif 'database' in label and ('daily' in label or 'work with' in label):
+                answer = work_with_databases_daily
+            elif 'cloud' in label and ('daily' in label or 'work with' in label or 'experience' in label):
+                answer = work_with_cloud_daily
+            elif 'python' in label and ('experience' in label or 'proficient' in label or 'know' in label):
+                answer = python_experience
+            elif 'javascript' in label and ('experience' in label or 'proficient' in label or 'know' in label):
+                answer = javascript_experience
+            elif 'sql' in label and ('experience' in label or 'proficient' in label or 'know' in label):
+                answer = sql_experience
+            elif 'devops' in label and ('experience' in label or 'proficient' in label or 'know' in label):
+                answer = devops_experience
+            elif 'agile' in label or 'scrum' in label:
+                answer = agile_experience
+            elif 'remote' in label and ('comfortable' in label or 'capable' in label or 'willing' in label):
+                answer = remote_work_capable
+            elif 'hybrid' in label and ('comfortable' in label or 'capable' in label or 'willing' in label):
+                answer = hybrid_work_capable
+            elif 'onsite' in label or 'on-site' in label or 'office' in label:
+                answer = onsite_work_capable
+            # Automation tools questions
+            elif 'zapier' in label:
+                if 'expert' in label:
+                    answer = zapier_expert
+                else:
+                    answer = zapier_experience
+            elif 'make' in label or 'integromat' in label:
+                if 'expert' in label:
+                    answer = make_integromat_expert
+                else:
+                    answer = make_integromat_experience
+            elif 'workflow' in label and 'automation' in label:
+                answer = automation_platforms
+            # Part-time with specific hours (15-20 hours/month)
+            elif 'part-time' in label or 'part time' in label:
+                if '15' in label or '20' in label or 'hours' in label:
+                    answer = "Yes"  # Willing to work specific part-time hours
+                else:
+                    answer = part_time_willing
+            # Retainer questions
+            elif 'retainer' in label:
+                if '$' in label or 'fixed' in label or 'month' in label:
+                    answer = "Yes"  # Willing to work on retainer
+                else:
+                    answer = retainer_willing
+            # Advanced automations count
+            elif 'how many' in label and 'automation' in label and ('built' in label or 'maintain' in label):
+                answer = advanced_automations_count
+            # IT transformation questions
+            elif 'transformation' in label and 'project' in label:
+                answer = it_transformation_experience
+            elif 'operating model' in label and 'transformation' in label:
+                answer = operating_model_transformation
+            elif 'ai' in label and ('solution' in label or 'based' in label) and 'develop' in label:
+                answer = ai_solutions_development
+            elif 'future ready' in label and 'operating model' in label:
+                answer = future_ready_operating_model
+            elif 'ai' in label and 'it function' in label:
+                answer = it_functions_ai_integration
+            elif 'digital transformation' in label:
+                answer = digital_transformation
+            elif 'technology' in label and 'modernization' in label:
+                answer = technology_modernization
+            # Travel questions
+            elif 'travel' in label:
+                if '40%' in label or '40 percent' in label:
+                    answer = travel_up_to_40_percent
+                elif '50%' in label or '50 percent' in label:
+                    answer = travel_up_to_50_percent
+                elif '25%' in label or '25 percent' in label:
+                    answer = travel_up_to_25_percent
+                elif '75%' in label or '75 percent' in label:
+                    answer = travel_up_to_75_percent
+                elif 'international' in label:
+                    answer = international_travel
+                elif 'overnight' in label:
+                    answer = overnight_travel
+                else:
+                    answer = travel_willing
+            else:
+                # Use intelligent analysis for unknown questions
+                job_context = {'company': current_company_context, 'description': job_description}
+                answer = enhance_answer_with_intelligence(label_org, 'No', optionsText, job_context)
+                if answer == 'No':  # If intelligence didn't help, keep default
+                    answer = 'No'  # Default to No instead of Yes for most questions
+                
             if overwrite_previous_answers or selected_option == "Select an option":
                 ##> ------ WINDY_WINDWARD - Added fuzzy logic to answer location based questions ------
-                if 'email' in label or 'phone' in label: 
-                    answer = prev_answer
+                if 'email' in label: 
+                    # SMART EMAIL SELECTION - Priority matching
+                    found_email = False
+                    # First priority: Exact match for application email
+                    for option_text in optionsText:
+                        if "NickalusBrewer@gmail.com" in option_text:
+                            answer = option_text
+                            found_email = True
+                            print_lg(f"[Smart Email] Selected priority email: {option_text}")
+                            break
+                    
+                    # Second priority: Any email with "NickalusBrewer"
+                    if not found_email:
+                        for option_text in optionsText:
+                            if "NickalusBrewer" in option_text:
+                                answer = option_text
+                                found_email = True
+                                print_lg(f"[Smart Email] Selected backup email: {option_text}")
+                                break
+                    
+                    # Third priority: Configured email variable
+                    if not found_email:
+                        for option_text in optionsText:
+                            if email in option_text:
+                                answer = option_text
+                                found_email = True
+                                print_lg(f"[Smart Email] Selected config email: {option_text}")
+                                break
+                    
+                    # Fourth priority: Name-based matching (NPBrewer, Nickalus, Brewer)
+                    if not found_email:
+                        name_variants = ["NPBrewer", "Nickalus", "Brewer", "nick", "nic"]
+                        for option_text in optionsText:
+                            option_lower = option_text.lower()
+                            for name_variant in name_variants:
+                                if name_variant.lower() in option_lower and "select" not in option_lower:
+                                    answer = option_text
+                                    found_email = True
+                                    print_lg(f"[Smart Email] Selected name-based email: {option_text} (matched: {name_variant})")
+                                    break
+                            if found_email:
+                                break
+                    
+                    # Final fallback: Skip "Select an option" and avoid suspicious emails
+                    if not found_email:
+                        print_lg(f"[Smart Email] No matching email found in options: {optionsText}")
+                        # Prefer professional/educational emails over personal ones
+                        for option_text in optionsText:
+                            if "select" not in option_text.lower() and ("edu" in option_text or "gmail" not in option_text):
+                                answer = option_text
+                                found_email = True
+                                print_lg(f"[Smart Email] Selected professional email: {option_text}")
+                                break
+                        
+                        # Last resort: any non-"Select" option
+                        if not found_email:
+                            answer = optionsText[1] if len(optionsText) > 1 else optionsText[0]
+                            print_lg(f"[Smart Email] Using fallback email: {answer}")
+                elif 'phone' in label and 'country' in label: 
+                    answer = "United States (+1)"
                 elif 'gender' in label or 'sex' in label: 
                     answer = gender
                 elif 'disability' in label: 
@@ -563,16 +1037,89 @@ def answer_questions(modal: WebElement, questions_list: set, work_location: str,
                 label_org += f' {options_labels[-1]},'
 
             if overwrite_previous_answers or prev_answer is None:
-                if 'citizenship' in label or 'employment eligibility' in label: answer = us_citizenship
-                elif 'veteran' in label or 'protected' in label: answer = veteran_status
+                # Intelligent context analysis for company-specific questions
+                company_keywords = ['worked at', 'employee at', 'employment at', 'position at', 'job at', 'role at']
+                relationship_keywords = ['personal relationship', 'know', 'familiar', 'friend', 'relative', 'connection']
+                
+                # Check if this is a company-specific question
+                is_company_question = any(keyword in label for keyword in company_keywords)
+                is_relationship_question = any(keyword in label for keyword in relationship_keywords)
+                
+                # BULLETPROOF COMPANY ANALYSIS - Complete list of companies ever worked for
+                known_companies = ['numtrix', 'texcel', 'omegaone', 'shf inc', 'hermann park conservancy', 'bayou innovations']
+                worked_at_unknown_company = True  # Default assumption: applying to unknown company
+                
+                # Check if the current company being applied to is in known companies
+                if current_company_context:
+                    # Check if current company matches any known company
+                    for known_company in known_companies:
+                        if known_company in current_company_context or current_company_context in known_company:
+                            worked_at_unknown_company = False
+                            print_lg(f"[Smart Context] Recognized known company: {current_company_context}")
+                            break
+                    
+                    if worked_at_unknown_company:
+                        print_lg(f"[Smart Context] Unknown company detected: {current_company_context}")
+                
+                # BULLETPROOF FALLBACK: For any company work history question, default to "No" unless explicitly known
+                if is_company_question:
+                    if worked_at_unknown_company:
+                        answer = "No"  # NEVER worked at companies not in history
+                        print_lg(f"[Smart Logic] Company work question detected - answering 'No' for unknown company")
+                    else:
+                        answer = "Yes"  # Only for known companies
+                        print_lg(f"[Smart Logic] Company work question detected - answering 'Yes' for known company")
+                elif is_relationship_question:
+                    answer = "No"  # No personal relationships at companies being applied to
+                elif 'willing to relocate' in label or 'relocate' in label:
+                    answer = willing_to_relocate
+                elif 'secondary employment' in label or 'side job' in label or 'other employment' in label:
+                    answer = "No"
+                elif 'authorization' in label or 'eligible to work' in label or 'work in' in label and 'us' in label:
+                    answer = "Yes"
+                elif 'citizenship' in label or 'employment eligibility' in label: 
+                    answer = us_citizenship
+                elif 'veteran' in label or 'protected' in label: 
+                    answer = veteran_status
                 elif 'disability' in label or 'handicapped' in label: 
                     answer = disability_status
-                else: answer = answer_common_questions(label,answer)
+                elif 'hispanic' in label or 'latino' in label:
+                    answer = hispanic_latino
+                elif 'ethnicity' in label or 'race' in label:
+                    answer = ethnicity
+                elif 'gender' in label and 'identity' in label:
+                    answer = "Man" if gender == "Male" else "Woman" if gender == "Female" else gender
+                elif 'sexual orientation' in label:
+                    answer = sexual_orientation if sexual_orientation != "Decline" else "I don't wish to answer"
+                elif 'transgender' in label:
+                    # For transgender questions, map to appropriate response
+                    if transgender == "No":
+                        answer = "No"
+                    elif transgender == "Yes":
+                        answer = "Yes"
+                    else:
+                        answer = "I don't wish to answer"
+                else: 
+                    # First try common questions
+                    answer = answer_common_questions(label,answer)
+                    # Then enhance with intelligent analysis
+                    job_context = {'company': current_company_context, 'description': job_description}
+                    answer = enhance_answer_with_intelligence(label_org, answer, 
+                                                            [opt.split('<')[0].strip('"') for opt in options_labels], 
+                                                            job_context)
                 foundOption = try_xp(radio, f".//label[normalize-space()='{answer}']", False)
                 if foundOption: 
                     actions.move_to_element(foundOption).click().perform()
                 else:    
-                    possible_answer_phrases = ["Decline", "not wish", "don't wish", "Prefer not", "not want"] if answer == 'Decline' else [answer]
+                    # Create better matching for common answers
+                    if answer == 'Decline':
+                        possible_answer_phrases = ["Decline", "not wish", "don't wish", "Prefer not", "not want"]
+                    elif answer == 'White':
+                        possible_answer_phrases = ["White", "White (Not Hispanic or Latino)", "Caucasian"]
+                    elif answer == 'No':
+                        possible_answer_phrases = ["No", "I am not", "I do not"]
+                    else:
+                        possible_answer_phrases = [answer]
                     ele = options[0]
                     answer = options_labels[0]
                     for phrase in possible_answer_phrases:
@@ -599,7 +1146,7 @@ def answer_questions(modal: WebElement, questions_list: set, work_location: str,
         
         # Check if it's a text question
         text = try_xp(Question, ".//input[@type='text']", False)
-        if text: 
+        if text:
             do_actions = False
             label = try_xp(Question, ".//label[@for]", False)
             try: label = label.find_element(By.CLASS_NAME,'visually-hidden')
@@ -610,19 +1157,57 @@ def answer_questions(modal: WebElement, questions_list: set, work_location: str,
 
             prev_answer = text.get_attribute("value")
             if not prev_answer or overwrite_previous_answers:
-                if 'experience' in label or 'years' in label: answer = years_of_experience
-                elif 'phone' in label or 'mobile' in label: answer = phone_number
-                elif 'street' in label: answer = street
+                # BULLETPROOF TEXT INPUT ANALYSIS
+                company_keywords = ['worked at', 'employed at', 'position at', 'job at', 'practice', 'employment at']
+                relationship_keywords = ['relationship', 'personal', 'friendship', 'know', 'familiar', 'connection']
+                
+                # Check for company-specific context
+                is_company_context = any(keyword in label for keyword in company_keywords)
+                is_relationship_context = any(keyword in label for keyword in relationship_keywords)
+                
+                # Smart analysis for follow-up questions
+                is_followup_question = any(phrase in label for phrase in ['if yes', 'provide more', 'describe', 'explain', 'details', 'name of', 'where', 'when'])
+                
+                # BULLETPROOF COMPANY LOGIC FOR TEXT FIELDS
+                known_companies = ['numtrix', 'texcel', 'omegaone', 'shf inc', 'hermann park conservancy', 'bayou innovations']
+                applying_to_unknown_company = True
+                
+                if current_company_context:
+                    for known_company in known_companies:
+                        if known_company in current_company_context or current_company_context in known_company:
+                            applying_to_unknown_company = False
+                            break
+                
+                # Handle company/relationship questions with bulletproof logic
+                if is_company_context and applying_to_unknown_company:
+                    answer = "No"  # Never worked at company being applied to
+                    print_lg(f"[Smart Text] Company work question - answering 'No' for {current_company_context}")
+                elif is_relationship_context and not is_followup_question:
+                    answer = "No"
+                    print_lg(f"[Smart Text] Relationship question - answering 'No'")
+                elif is_followup_question and applying_to_unknown_company:
+                    answer = "N/A"  # Don't provide details for No answers
+                    print_lg(f"[Smart Text] Follow-up question after No - answering 'N/A'")
+                elif is_company_context and ('name' in label or 'location' in label):
+                    answer = "N/A"  # Don't put personal info in company fields
+                elif 'experience' in label or 'years' in label: 
+                    answer = years_of_experience
+                elif 'phone' in label or 'mobile' in label: 
+                    answer = phone_number
+                elif 'street' in label: 
+                    answer = street
                 elif 'city' in label or 'location' in label or 'address' in label:
                     answer = current_city if current_city else work_location
                     do_actions = True
-                elif 'signature' in label: answer = full_name # 'signature' in label or 'legal name' in label or 'your name' in label or 'full name' in label: answer = full_name     # What if question is 'name of the city or university you attend, name of referral etc?'
+                elif 'signature' in label: 
+                    answer = full_name
                 elif 'name' in label:
                     if 'full' in label: answer = full_name
                     elif 'first' in label and 'last' not in label: answer = first_name
                     elif 'middle' in label and 'last' not in label: answer = middle_name
                     elif 'last' in label and 'first' not in label: answer = last_name
                     elif 'employer' in label: answer = recent_employer
+                    elif 'practice' in label or 'company' in label: answer = "N/A"  # Don't put personal name in company fields
                     else: answer = full_name
                 elif 'notice' in label:
                     if 'month' in label:
@@ -653,7 +1238,28 @@ def answer_questions(modal: WebElement, questions_list: set, work_location: str,
                 elif 'state' in label or 'province' in label: answer = state
                 elif 'zip' in label or 'postal' in label or 'code' in label: answer = zipcode
                 elif 'country' in label: answer = country
-                else: answer = answer_common_questions(label,answer)
+                # Handle decimal number questions
+                elif 'decimal' in label and 'number' in label:
+                    if 'larger than 0' in label or 'greater than 0' in label:
+                        answer = "3.0"  # Default decimal value
+                    else:
+                        answer = "1.0"
+                # Handle "how many automations" for text fields
+                elif 'how many' in label and 'automation' in label:
+                    answer = advanced_automations_count
+                # Handle years of experience with automation
+                elif 'years' in label and 'automation' in label and 'experience' in label:
+                    answer = workflow_automation_years
+                else: 
+                    # First try common questions
+                    answer = answer_common_questions(label,answer)
+                    # Then enhance with intelligent analysis for text questions
+                    if answer == "" or answer == years_of_experience:
+                        job_context = {'company': current_company_context, 'description': job_description}
+                        intelligent_answer = enhance_answer_with_intelligence(label_org, answer, None, job_context)
+                        if intelligent_answer != answer and intelligent_answer != "":
+                            answer = intelligent_answer
+                            print_lg(f"[Intelligent Response] Enhanced answer for '{label_org}': {answer}")
                 ##> ------ Yang Li : MARKYangL - Feature ------
                 if answer == "":
                     if use_AI and aiClient:
@@ -699,7 +1305,8 @@ def answer_questions(modal: WebElement, questions_list: set, work_location: str,
             prev_answer = text_area.get_attribute("value")
             if not prev_answer or overwrite_previous_answers:
                 if 'summary' in label: answer = linkedin_summary
-                elif 'cover' in label: answer = cover_letter
+                elif any(keyword in label for keyword in ['cover', 'letter', 'motivation', 'why are you', 'why do you want', 'tell us about yourself']):
+                    answer = cover_letter
                 if answer == "":
                 ##> ------ Yang Li : MARKYangL - Feature ------
                     if use_AI and aiClient:
@@ -744,13 +1351,75 @@ def answer_questions(modal: WebElement, questions_list: set, work_location: str,
             answer = answer.text if answer else "Unknown"
             prev_answer = checkbox.is_selected()
             checked = prev_answer
-            if not prev_answer:
+            
+            # Intelligent checkbox handling for demographic questions
+            should_check = False
+            answer_lower = answer.lower()
+            
+            # Use intelligent analysis for complex checkbox questions
+            job_context = {'company': current_company_context, 'description': job_description}
+            intelligent_response = enhance_answer_with_intelligence(
+                f"{label_org} - {answer}", 
+                "check" if should_check else "uncheck", 
+                ["check", "uncheck"], 
+                job_context
+            )
+            
+            # Handle race/ethnicity checkboxes
+            if 'race' in label or 'racial' in label or 'ethnic' in label:
+                if ethnicity == "White" and ("white" in answer_lower or "european" in answer_lower):
+                    should_check = True
+                elif ethnicity == "Black" and ("black" in answer_lower or "african" in answer_lower):
+                    should_check = True
+                elif ethnicity == "Asian" and "asian" in answer_lower:
+                    should_check = True
+                elif ethnicity == "Hispanic/Latino" and ("hispanic" in answer_lower or "latino" in answer_lower or "latinx" in answer_lower):
+                    should_check = True
+                elif "don't wish" in answer_lower or "decline" in answer_lower:
+                    should_check = (ethnicity == "Decline" or ethnicity == "")
+            
+            # Handle gender checkboxes
+            elif 'gender' in label:
+                if gender == "Male" and "man" in answer_lower:
+                    should_check = True
+                elif gender == "Female" and "woman" in answer_lower:
+                    should_check = True
+                elif "don't wish" in answer_lower or "decline" in answer_lower:
+                    should_check = (gender == "Decline" or gender == "")
+            
+            # Handle sexual orientation checkboxes
+            elif 'sexual orientation' in label:
+                if sexual_orientation == "Heterosexual" and "heterosexual" in answer_lower:
+                    should_check = True
+                elif sexual_orientation == "Gay" and "gay" in answer_lower:
+                    should_check = True
+                elif sexual_orientation == "Lesbian" and "lesbian" in answer_lower:
+                    should_check = True
+                elif sexual_orientation == "Bisexual" and ("bisexual" in answer_lower or "pansexual" in answer_lower):
+                    should_check = True
+                elif sexual_orientation == "Asexual" and "asexual" in answer_lower:
+                    should_check = True
+                elif "don't wish" in answer_lower or "decline" in answer_lower:
+                    should_check = (sexual_orientation == "Decline" or sexual_orientation == "I don't wish to answer")
+            
+            # Handle other common checkbox scenarios
+            elif 'willing' in label and 'relocate' in label:
+                should_check = (willing_to_relocate == "Yes")
+            elif 'agree' in label or 'acknowledge' in label or 'confirm' in label:
+                should_check = True  # Generally agree to terms
+            else:
+                # For other checkboxes, default to current behavior
+                should_check = not prev_answer
+            
+            # Apply the checkbox action if needed
+            if should_check != prev_answer:
                 try:
                     actions.move_to_element(checkbox).click().perform()
-                    checked = True
+                    checked = should_check
                 except Exception as e: 
                     print_lg("Checkbox click failed!", e)
                     pass
+            
             questions_list.add((f'{label} ([X] {answer})', checked, "checkbox", prev_answer))
             continue
 
@@ -896,7 +1565,7 @@ def apply_to_jobs(search_terms: list[str]) -> None:
 
         current_count = 0
         try:
-            while current_count < switch_number:
+            while current_count < switch_number and not shutdown_requested:
                 # Wait until job listings are loaded
                 wait.until(EC.presence_of_all_elements_located((By.XPATH, "//li[@data-occludable-job-id]")))
 
@@ -908,11 +1577,19 @@ def apply_to_jobs(search_terms: list[str]) -> None:
 
             
                 for job in job_listings:
+                    if shutdown_requested:
+                        print_lg("Stopping job processing due to shutdown request...")
+                        break
                     if keep_screen_awake: pyautogui.press('shiftright')
                     if current_count >= switch_number: break
                     print_lg("\n-@-\n")
 
                     job_id,title,company,work_location,work_style,skip = get_job_main_details(job, blacklisted_companies, rejected_jobs)
+                    
+                    # Set global company context for intelligent question answering
+                    global current_company_context
+                    current_company_context = company.lower().strip()
+                    print_lg(f"[Smart Context] Current company: {current_company_context}")
                     
                     if skip: continue
                     # Redundant fail safe check for applied jobs!
@@ -1126,6 +1803,10 @@ def apply_to_jobs(search_terms: list[str]) -> None:
             critical_error_log("In Applier", e)
             print_lg(driver.page_source, pretty=True)
             # print_lg(e)
+        finally:
+            if shutdown_requested:
+                print_lg("\n\nGracefully shutting down...")
+                print_lg("Jobs processed before shutdown: " + str(current_count))
 
         
 def run(total_runs: int) -> int:
@@ -1271,4 +1952,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    # Register signal handler for graceful shutdown
+    signal.signal(signal.SIGINT, signal_handler)
     main()
